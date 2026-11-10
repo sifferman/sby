@@ -1,0 +1,32 @@
+[tasks]
+no_reset
+reset_only      reset
+reset_and_skip  reset skip
+
+[options]
+mode prove
+no_reset: expect fail
+reset_only: expect fail
+reset_and_skip: expect pass
+
+[engines]
+abc pdr
+
+[script]
+read -formal reset_sequence.sv
+prep -top reset_sequence
+reset: fminit -seq rst_ni 0,1 A:top
+skip: chformal -assert -cover -live -fair -skip 1
+
+[file reset_sequence.sv]
+module reset_sequence(input clk_i, input rst_ni, output reg [3:0] level_o);
+    always @(posedge clk_i) begin
+        if (!rst_ni)
+            level_o <= 0;
+        else if (level_o != 9)
+            level_o <= level_o + 1;
+    end
+
+    always @(posedge clk_i)
+        level_in_range: assert (level_o <= 9);
+endmodule

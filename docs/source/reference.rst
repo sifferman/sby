@@ -570,6 +570,49 @@ Run ``yosys`` in a terminal window and enter ``help`` on the Yosys prompt
 for a command list. Run ``help <command>`` for a detailed description of the
 command, for example ``help prep``.
 
+Reset sequences
+~~~~~~~~~~~~~~~
+
+SBY leaves the primary inputs of the design unconstrained, so a solver is free
+to deassert a reset input in the first cycle, or to assert it again later in the
+trace. Every property that holds only after a reset then fails. The Yosys
+``fminit`` command constrains an input to a fixed sequence of values at the
+start of the trace, which resets the design without a change to the design
+files:
+
+.. code-block:: sby
+
+   [script]
+   read -sv mytest.sv
+   prep -top mytest
+   fminit -seq rst_ni 0,1 A:top
+
+The sequence is a comma-separated list of values, and the last value holds for
+the rest of the trace. ``0,1`` keeps the active-low reset ``rst_ni`` low for one
+cycle and high afterwards, while ``1,1,1,0`` keeps an active-high reset high for
+three cycles. A ``'z`` leaves that cycle unconstrained. The ``A:top`` selection
+narrows the command to the top module, which ``fminit`` requires.
+
+The sequence advances once per formal time step, which with the default
+``multiclock off`` is one clock cycle. ``fminit -posedge <clock>`` advances it on
+a clock edge instead.
+
+Properties still hold during the reset cycles, where the design has not yet
+reached its reset state. Either guard each property in the design, or drop the
+first cycles of the check with ``chformal``:
+
+.. code-block:: sby
+
+   [script]
+   read -sv mytest.sv
+   prep -top mytest
+   fminit -seq rst_ni 0,1 A:top
+   chformal -assert -cover -live -fair -skip 1
+
+``chformal -skip`` takes the number of cycles to ignore, which matches the number
+of reset cycles in the sequence. It names the property types to drop, so
+assumptions stay active, including the one ``fminit`` added.
+
 
 Files section
 -------------
