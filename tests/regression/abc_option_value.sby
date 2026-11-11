@@ -1,0 +1,14 @@
+[options]
+mode prove
+
+[engines]
+abc --keep-going=yes pdr
+
+[script]
+read -formal top.sv
+prep -top top
+
+[file top.sv]
+module top;
+    always assert (1);
+endmodule
